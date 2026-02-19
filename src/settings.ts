@@ -385,6 +385,31 @@ export class NumeralsSettingTab extends PluginSettingTab {
 			
 		new Setting(containerEl)
 		.setHeading()
+		.setName('Custom units');
+
+		new Setting(containerEl)
+			.setName('Custom unit definitions')
+			.setDesc(htmlToElements(
+				`Define custom units available in all <code>math</code> blocks, one per line.<br>`
+				+ `Format: <code>name = definition</code> or <code>name</code> for a new base unit.<br>`
+				+ `Examples: <code>tablespoon = 14.786765 mL</code>, <code>furlong = 201.168 m</code><br>`
+				+ `You can also define per-block units inline with <code>@createUnit name = definition</code>.<br>`
+				+ `<i>Note: Requires Obsidian reload to take effect after changes.</i>`
+			))
+			.addTextArea(text => {
+				text
+					.setPlaceholder('tablespoon = 14.786765 mL\nfurlong = 201.168 m') // eslint-disable-line obsidianmd/ui/sentence-case
+					.setValue(this.plugin.settings.customUnits)
+					.onChange(async (value) => {
+						this.plugin.settings.customUnits = value;
+						await this.plugin.saveSettings();
+					});
+				text.inputEl.rows = 4;
+				text.inputEl.addClass('numerals-settings-custom-units');
+			});
+
+		new Setting(containerEl)
+		.setHeading()
 		.setName('Obsidian integration');	
 
 		new Setting(containerEl)

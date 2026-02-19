@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file. The format 
 ## [Unreleased]
 
 ### Added
+- **Custom units** ([#custom-units](https://github.com/gtg922r/obsidian-numerals/issues)): Define reusable custom units in two ways:
+  - **Settings-based**: Add unit definitions (one per line) in *Settings → Custom units*. Format: `name = definition` (e.g. `tablespoon = 14.786765 mL`) or just `name` for a new dimensionless base unit. Units defined here are available in all `math` blocks after an Obsidian reload.
+  - **Block-level directive**: Use `@createUnit name [= definition]` on its own line inside a `math` block to define a unit scoped to that block (and reused across re-renders). The directive line is hidden from the rendered output.
 - Settings tab icon (`calculator`) for upcoming Obsidian settings tab icon feature.
 - `AGENTS.md` with project conventions for AI coding assistants (conventional commits, atomic commits, CHANGELOG maintenance).
 - `eslint-plugin-obsidianmd` with recommended ruleset for Obsidian plugin best practices.

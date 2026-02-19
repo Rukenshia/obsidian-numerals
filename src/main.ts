@@ -226,6 +226,40 @@ export default class NumeralsPlugin extends Plugin {
 		];
 	}
 
+	/**
+	 * Parses the `customUnits` setting and registers each unit with mathjs.
+	 * 
+	 * Format (one definition per line):
+	 *   - `name = definition`  — creates a unit with the given definition
+	 *   - `name`               — creates a new base unit with no dimensions
+	 * Lines starting with `#` and trailing comments after `#` are ignored.
+	 * 
+	 * Unit creation is irreversible for the lifetime of the mathjs instance, so
+	 * already-defined units are silently ignored on subsequent calls (e.g., when
+	 * the plugin is disabled and re-enabled without restarting the app).
+	 */
+	createCustomUnits(): void {
+		const lines = (this.settings.customUnits ?? "")
+			.split('\n')
+			.map(line => line.replace(/#.*$/, '').trim())
+			.filter(line => line.length > 0);
+
+		for (const line of lines) {
+			const match = line.match(/^(\w+)(?:\s*=\s*(.+))?$/);
+			if (!match) continue;
+			const [, name, definition] = match;
+			try {
+				if (definition) {
+					math.createUnit(name, definition.trim());
+				} else {
+					math.createUnit(name);
+				}
+			} catch {
+				// Unit already exists – silently ignore
+			}
+		}
+	}
+
 	async onload() {
 		await this.loadSettings();
 		this.updateLocale();
@@ -249,6 +283,9 @@ export default class NumeralsPlugin extends Plugin {
 				}
 			}
 		}
+
+		// Create user-defined custom units from settings
+		this.createCustomUnits();
 
 		// Register Markdown Code Block Processors
 		const priority = 100;

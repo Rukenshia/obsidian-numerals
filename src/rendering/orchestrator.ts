@@ -1,6 +1,6 @@
 import * as math from 'mathjs';
 import { App, Editor, MarkdownPostProcessorContext, MarkdownView, WorkspaceLeaf } from 'obsidian';
-import { NumeralsLayout, NumeralsRenderStyle, NumeralsSettings, mathjsFormat, NumeralsScope, StringReplaceMap, ProcessedBlock, EvaluationResult, RenderContext } from '../numerals.types';
+import { NumeralsLayout, NumeralsRenderStyle, NumeralsSettings, mathjsFormat, NumeralsScope, StringReplaceMap, ProcessedBlock, EvaluationResult, RenderContext, CreateUnitDirective } from '../numerals.types';
 import { RendererFactory } from '../renderers';
 import { getScopeFromFrontmatter } from '../processing/scope';
 import { preProcessBlockForNumeralsDirectives } from '../processing/preprocessor';
@@ -182,6 +182,27 @@ export function handleResultInsertions(
 }
 
 /**
+ * Creates mathjs units from an array of @createUnit directives.
+ * Units that already exist are silently ignored so that re-rendering a block
+ * does not throw errors.
+ *
+ * @param directives - Parsed CreateUnitDirective objects from a math block
+ */
+export function applyCreateUnitDirectives(directives: CreateUnitDirective[]): void {
+	for (const directive of directives) {
+		try {
+			if (directive.definition) {
+				math.createUnit(directive.name, directive.definition);
+			} else {
+				math.createUnit(directive.name);
+			}
+		} catch {
+			// Unit already exists – silently ignore
+		}
+	}
+}
+
+/**
  * Renders a Numerals block from a given source string, using provided metadata and settings.  
  *   
  * This function takes a source string, which represents a block of Numerals code, and processes it   
@@ -238,6 +259,9 @@ export function processAndRenderNumeralsBlockFromSource(
 		settings.forceProcessAllFrontmatter,
 		preProcessors
 	);
+
+	// Phase 4.5: Create any units declared via @createUnit directives in this block
+	applyCreateUnitDirectives(processedBlock.createUnitDirectives);
 
 	// Phase 5: Evaluate
 	const evaluationResult = evaluateMathFromSourceStrings(

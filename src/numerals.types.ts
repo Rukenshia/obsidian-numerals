@@ -63,6 +63,8 @@ export interface NumeralsSettings {
 	forceProcessAllFrontmatter: boolean;
 	customCurrencySymbol: CurrencyType | null;
 	enableGreekAutoComplete: boolean;
+	/** Custom unit definitions, one per line. Format: "name = definition" or "name" for a new base unit. */
+	customUnits: string;
 	// Inline Numerals settings
 	enableInlineNumerals: boolean;
 	inlineResultTrigger: string;
@@ -86,6 +88,7 @@ export const DEFAULT_SETTINGS: NumeralsSettings = {
 	forceProcessAllFrontmatter: 		false,
 	customCurrencySymbol: 				null,
 	enableGreekAutoComplete: 			true,
+	customUnits: 						"",
 	// Inline Numerals settings
 	enableInlineNumerals:				true,
 	inlineResultTrigger:				"#:",
@@ -128,6 +131,18 @@ export interface ProcessedBlock {
 	processedSource: string;
 	/** Metadata about special lines (emitters, insertions, etc.) */
 	blockInfo: numeralsBlockInfo;
+	/** Unit definitions extracted from @createUnit directives */
+	createUnitDirectives: CreateUnitDirective[];
+}
+
+/**
+ * A parsed @createUnit directive from within a math block.
+ */
+export interface CreateUnitDirective {
+	/** Unit name to create */
+	name: string;
+	/** Optional definition (e.g. "14.786765 mL"). Absent means a new base unit. */
+	definition?: string;
 }
 
 /**

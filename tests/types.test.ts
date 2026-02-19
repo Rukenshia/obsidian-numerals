@@ -28,6 +28,7 @@ describe('Rendering Pipeline Types', () => {
 					hidden_lines: [],
 					shouldHideNonEmitterLines: false,
 				},
+				createUnitDirectives: [],
 			};
 
 			expect(processedBlock.rawRows).toHaveLength(2);
@@ -45,6 +46,7 @@ describe('Rendering Pipeline Types', () => {
 					hidden_lines: [],
 					shouldHideNonEmitterLines: false,
 				},
+				createUnitDirectives: [],
 			};
 
 			expect(processedBlock.rawRows).toHaveLength(0);
@@ -256,6 +258,7 @@ describe('Type Compatibility', () => {
 			rawRows,
 			processedSource,
 			blockInfo,
+			createUnitDirectives: [],
 		};
 
 		expect(processedBlock).toBeDefined();

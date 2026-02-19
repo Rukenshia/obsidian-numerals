@@ -1,4 +1,4 @@
-import { StringReplaceMap, numeralsBlockInfo } from '../numerals.types';
+import { StringReplaceMap, numeralsBlockInfo, CreateUnitDirective } from '../numerals.types';
 
 /**
  * Process a block of text to convert from Numerals syntax to MathJax syntax
@@ -20,8 +20,8 @@ export function replaceStringsInTextFromMap(text: string, stringReplaceMap: Stri
  * @param source - The source string to process.
  * @param preProcessors - An array of StringReplaceMap objects that specify text replacements to be
  * made in the source string before it is processed.
- * @returns An object containing the processed source string, the emitter lines, and the result
- * insertion lines.
+ * @returns An object containing the processed source string, the emitter lines, the result
+ * insertion lines, and any @createUnit directives.
  */
 export function preProcessBlockForNumeralsDirectives(
 	source: string,
@@ -29,7 +29,8 @@ export function preProcessBlockForNumeralsDirectives(
 ): {
 	rawRows: string[],
 	processedSource: string,
-	blockInfo: numeralsBlockInfo
+	blockInfo: numeralsBlockInfo,
+	createUnitDirectives: CreateUnitDirective[],
 } {
 
 	const rawRows: string[] = source.split("\n");
@@ -38,6 +39,7 @@ export function preProcessBlockForNumeralsDirectives(
 	const emitter_lines: number[] = [];
 	const insertion_lines: number[] = [];
 	const hidden_lines: number[] = [];
+	const createUnitDirectives: CreateUnitDirective[] = [];
 	let shouldHideNonEmitterLines = false;
 
 	// Find emitter and result insertion lines before modifying source
@@ -60,9 +62,19 @@ export function preProcessBlockForNumeralsDirectives(
 			shouldHideNonEmitterLines = true;
 		}
 
-		// Find @createUnit directives (starts with @createUnit, ignoring whitespace)
-		if (rawRows[i].match(/^\s*@createUnit\s*$/)) {
+		// Find @createUnit directives: @createUnit name [= definition] [# comment]
+		// Matches both legacy bare "@createUnit" and the full form with a unit name.
+		const createUnitMatch = rawRows[i].match(/^\s*@createUnit(?:\s+(\w+)(?:\s*=\s*([^#\n]+?))?(?:\s*#.*)?)?\s*$/);
+		if (createUnitMatch) {
 			hidden_lines.push(i);
+			if (createUnitMatch[1]) {
+				// Only collect directives that actually specify a unit name
+				const directive: CreateUnitDirective = { name: createUnitMatch[1] };
+				if (createUnitMatch[2]) {
+					directive.definition = createUnitMatch[2].trim();
+				}
+				createUnitDirectives.push(directive);
+			}
 		}
 	} 
 
@@ -81,6 +93,9 @@ export function preProcessBlockForNumeralsDirectives(
 	// Remove @hideRows directive
 	processedSource = processedSource.replace(/^\s*@hideRows/gim, "");
 
+	// Remove @createUnit directives (they are handled separately before evaluation)
+	processedSource = processedSource.replace(/^\s*@createUnit[^\n]*/gim, "");
+
 	// Apply any pre-processors (e.g. currency replacement, thousands separator replacement, etc.)
 	if (preProcessors && preProcessors.length > 0) {
 		processedSource = replaceStringsInTextFromMap(processedSource, preProcessors);
@@ -94,6 +109,7 @@ export function preProcessBlockForNumeralsDirectives(
 			insertion_lines,
 			hidden_lines,
 			shouldHideNonEmitterLines
-		}
+		},
+		createUnitDirectives,
 	}
 }

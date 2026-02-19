@@ -336,6 +336,70 @@ apples = 2
 		expect(result.blockInfo.hidden_lines).toEqual([]);
 		expect(result.blockInfo.shouldHideNonEmitterLines).toBe(false);
 	});
+
+	it("Identifies @createUnit directive with name and definition", () => {
+		const sampleBlock = `@createUnit tablespoon = 14.786765 mL
+volume = 3 tablespoon`;
+
+		const result = preProcessBlockForNumeralsDirectives(sampleBlock, undefined);
+
+		expect(result.rawRows).toEqual([
+			"@createUnit tablespoon = 14.786765 mL",
+			"volume = 3 tablespoon",
+		]);
+		expect(result.blockInfo.hidden_lines).toEqual([0]);
+		expect(result.createUnitDirectives).toEqual([
+			{ name: "tablespoon", definition: "14.786765 mL" },
+		]);
+		// Directive line should be removed from processedSource
+		expect(result.processedSource).not.toContain("@createUnit");
+		expect(result.processedSource).toContain("volume = 3 tablespoon");
+	});
+
+	it("Identifies @createUnit directive with name only (new base unit)", () => {
+		const sampleBlock = `@createUnit widget
+count = 5 widget`;
+
+		const result = preProcessBlockForNumeralsDirectives(sampleBlock, undefined);
+
+		expect(result.blockInfo.hidden_lines).toEqual([0]);
+		expect(result.createUnitDirectives).toEqual([
+			{ name: "widget" },
+		]);
+		expect(result.processedSource).not.toContain("@createUnit");
+	});
+
+	it("Handles multiple @createUnit directives", () => {
+		const sampleBlock = `@createUnit tablespoon = 14.786765 mL
+@createUnit cup = 16 tablespoon
+volume = 2 cup`;
+
+		const result = preProcessBlockForNumeralsDirectives(sampleBlock, undefined);
+
+		expect(result.blockInfo.hidden_lines).toEqual([0, 1]);
+		expect(result.createUnitDirectives).toHaveLength(2);
+		expect(result.createUnitDirectives[0]).toEqual({ name: "tablespoon", definition: "14.786765 mL" });
+		expect(result.createUnitDirectives[1]).toEqual({ name: "cup", definition: "16 tablespoon" });
+		expect(result.processedSource).not.toContain("@createUnit");
+		expect(result.processedSource).toContain("volume = 2 cup");
+	});
+
+	it("@createUnit with inline comment is parsed correctly", () => {
+		const sampleBlock = `@createUnit furlong = 201.168 m # horse racing unit
+distance = 8 furlong`;
+
+		const result = preProcessBlockForNumeralsDirectives(sampleBlock, undefined);
+
+		expect(result.createUnitDirectives).toEqual([
+			{ name: "furlong", definition: "201.168 m" },
+		]);
+	});
+
+	it("Returns empty createUnitDirectives when no @createUnit present", () => {
+		const sampleBlock = `x = 5\ny = x + 2`;
+		const result = preProcessBlockForNumeralsDirectives(sampleBlock, undefined);
+		expect(result.createUnitDirectives).toEqual([]);
+	});
 });
 
 /**
@@ -1129,5 +1193,28 @@ describe("numeralsUtilities: processAndRenderNumeralsBlockFromSource end-to-end 
 		};
 		processAndRenderNumeralsBlockFromSource(el, source, ctx, metadata, type, settings, numberFormat, preProcessors, mockApp);
 		expect(el).toMatchSnapshot();
-	});		
+	});
+
+	it('@createUnit directive creates a usable custom unit in the block', () => {
+		// Use unique names to avoid conflicts with other tests (mathjs unit creation is global)
+		source = `@createUnit testBucket = 12 L\nvolume = 3 testBucket`;
+		processAndRenderNumeralsBlockFromSource(el, source, ctx, metadata, type, settings, numberFormat, preProcessors, mockApp);
+
+		const lines = el.querySelectorAll(".numerals-line");
+		// The @createUnit line should be hidden; only the calculation line renders
+		expect(lines.length).toBe(1);
+		expect(lines[0].textContent).toContain("volume = 3 testBucket");
+		// mathjs returns the result in the declared unit (testBucket); no error means the unit is usable
+		expect(lines[0].textContent).toContain("3 testBucket");
+	});
+
+	it('@createUnit directive with base unit (no definition)', () => {
+		source = `@createUnit testWidget\ncount = 5 testWidget`;
+		processAndRenderNumeralsBlockFromSource(el, source, ctx, metadata, type, settings, numberFormat, preProcessors, mockApp);
+
+		const lines = el.querySelectorAll(".numerals-line");
+		expect(lines.length).toBe(1);
+		expect(lines[0].textContent).toContain("count = 5 testWidget");
+		expect(lines[0].textContent).toContain("5 testWidget");
+	});
 });
